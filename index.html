@@ -1,3 +1,4 @@
+```html
 <!doctype html>
 <html lang="es">
 <head>
@@ -34,12 +35,14 @@
     <h1>Asistente IA</h1>
     <p>Asistente de información comercial</p>
   </header>
+
   <main id="chat">
     <div class="empty" id="welcome">
       <h2>¿En qué puedo ayudarte?</h2>
       <p>Escribe una pregunta para comenzar.</p>
     </div>
   </main>
+
   <div class="composer">
     <form id="form">
       <textarea id="input" placeholder="Escribe tu pregunta..." rows="1"></textarea>
@@ -48,9 +51,9 @@
     <div class="status" id="status"></div>
   </div>
 </div>
+
 <script>
-  // No colocar API keys aquí. La URL se configurará posteriormente para apuntar a Make.
-  const MAKE_WEBHOOK_URL = "";
+  const API_URL = "https://asistente-ia-api.devplusdesarrollo.workers.dev/";
 
   const form = document.getElementById("form");
   const input = document.getElementById("input");
@@ -61,11 +64,14 @@
 
   function addMessage(role, text) {
     if (welcome) welcome.remove();
+
     const wrap = document.createElement("div");
     wrap.className = "msg";
+
     const bubble = document.createElement("div");
     bubble.className = role === "user" ? "user" : "assistant";
     bubble.textContent = text;
+
     wrap.appendChild(bubble);
     chat.appendChild(wrap);
     chat.scrollTop = chat.scrollHeight;
@@ -73,36 +79,55 @@
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
+
     const question = input.value.trim();
+
     if (!question || send.disabled) return;
 
     addMessage("user", question);
+
     input.value = "";
     send.disabled = true;
-
-    if (!MAKE_WEBHOOK_URL) {
-      addMessage("assistant", "MVP conectado correctamente. El backend de IA aún no está configurado.");
-      status.textContent = "Interfaz funcionando; falta conectar el webhook de Make.";
-      send.disabled = false;
-      input.focus();
-      return;
-    }
-
     status.textContent = "Consultando...";
+
     try {
-      const response = await fetch(MAKE_WEBHOOK_URL, {
+      const response = await fetch(API_URL, {
         method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({question})
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          message: question
+        })
       });
 
-      if (!response.ok) throw new Error("HTTP " + response.status);
+      if (!response.ok) {
+        throw new Error("HTTP " + response.status);
+      }
+
       const data = await response.json();
-      addMessage("assistant", data.answer ?? data.response ?? "No se recibió una respuesta válida.");
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      addMessage(
+        "assistant",
+        data.reply ?? "No se recibió una respuesta válida."
+      );
+
       status.textContent = "";
+
     } catch (err) {
-      addMessage("assistant", "No fue posible obtener la respuesta del asistente.");
+      console.error(err);
+
+      addMessage(
+        "assistant",
+        "No fue posible obtener la respuesta del asistente."
+      );
+
       status.textContent = "Error de conexión con el backend.";
+
     } finally {
       send.disabled = false;
       input.focus();
@@ -116,5 +141,7 @@
     }
   });
 </script>
+
 </body>
 </html>
+```
