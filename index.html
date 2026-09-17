@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Asistente IA</title>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:#f5f7fa;color:#1f2937}
+    .app{height:100vh;display:flex;flex-direction:column;max-width:1100px;margin:auto;background:#fff}
+    header{padding:18px 22px;border-bottom:1px solid #e5e7eb}
+    header h1{margin:0;font-size:20px;font-weight:600}
+    header p{margin:4px 0 0;color:#6b7280;font-size:13px}
+    main{flex:1;overflow:auto;padding:24px}
+    .empty{text-align:center;margin:12vh auto;max-width:650px}
+    .empty h2{font-size:28px;margin:0 0 8px}
+    .empty p{color:#6b7280;margin:0}
+    .msg{max-width:820px;margin:0 auto 18px}
+    .user{background:#eef2ff;padding:13px 16px;border-radius:14px;white-space:pre-wrap}
+    .assistant{padding:13px 4px;white-space:pre-wrap;line-height:1.55}
+    .composer{padding:14px 18px;border-top:1px solid #e5e7eb;background:#fff}
+    form{display:flex;gap:10px;max-width:900px;margin:auto}
+    textarea{flex:1;resize:none;min-height:48px;max-height:140px;border:1px solid #d1d5db;border-radius:12px;padding:13px;font:inherit;outline:none}
+    textarea:focus{border-color:#6366f1}
+    button{border:0;border-radius:12px;padding:0 20px;background:#4f46e5;color:white;font-weight:600;cursor:pointer}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    .status{font-size:12px;color:#6b7280;max-width:900px;margin:7px auto 0}
+    @media(max-width:650px){main{padding:16px}.composer{padding:10px}form{gap:7px}button{padding:0 14px}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Asistente IA</h1>
+    <p>Asistente de información comercial</p>
+  </header>
+  <main id="chat">
+    <div class="empty" id="welcome">
+      <h2>¿En qué puedo ayudarte?</h2>
+      <p>Escribe una pregunta para comenzar.</p>
+    </div>
+  </main>
+  <div class="composer">
+    <form id="form">
+      <textarea id="input" placeholder="Escribe tu pregunta..." rows="1"></textarea>
+      <button id="send" type="submit">Enviar</button>
+    </form>
+    <div class="status" id="status"></div>
+  </div>
+</div>
+<script>
+  // No colocar API keys aquí. La URL se configurará posteriormente para apuntar a Make.
+  const MAKE_WEBHOOK_URL = "";
+
+  const form = document.getElementById("form");
+  const input = document.getElementById("input");
+  const chat = document.getElementById("chat");
+  const send = document.getElementById("send");
+  const status = document.getElementById("status");
+  const welcome = document.getElementById("welcome");
+
+  function addMessage(role, text) {
+    if (welcome) welcome.remove();
+    const wrap = document.createElement("div");
+    wrap.className = "msg";
+    const bubble = document.createElement("div");
+    bubble.className = role === "user" ? "user" : "assistant";
+    bubble.textContent = text;
+    wrap.appendChild(bubble);
+    chat.appendChild(wrap);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const question = input.value.trim();
+    if (!question || send.disabled) return;
+
+    addMessage("user", question);
+    input.value = "";
+    send.disabled = true;
+
+    if (!MAKE_WEBHOOK_URL) {
+      addMessage("assistant", "MVP conectado correctamente. El backend de IA aún no está configurado.");
+      status.textContent = "Interfaz funcionando; falta conectar el webhook de Make.";
+      send.disabled = false;
+      input.focus();
+      return;
+    }
+
+    status.textContent = "Consultando...";
+    try {
+      const response = await fetch(MAKE_WEBHOOK_URL, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({question})
+      });
+
+      if (!response.ok) throw new Error("HTTP " + response.status);
+      const data = await response.json();
+      addMessage("assistant", data.answer ?? data.response ?? "No se recibió una respuesta válida.");
+      status.textContent = "";
+    } catch (err) {
+      addMessage("assistant", "No fue posible obtener la respuesta del asistente.");
+      status.textContent = "Error de conexión con el backend.";
+    } finally {
+      send.disabled = false;
+      input.focus();
+    }
+  });
+
+  input.addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      form.requestSubmit();
+    }
+  });
+</script>
+</body>
+</html>
