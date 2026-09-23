@@ -32,7 +32,7 @@
 <div class="app">
   <header>
     <h1>Asistente IA</h1>
-    <p>Asistente de información comercial</p>
+    <p id="mode">Asistente de información comercial</p>
   </header>
 
   <main id="chat">
@@ -59,6 +59,10 @@
   const chat = document.getElementById("chat");
   const send = document.getElementById("send");
   const status = document.getElementById("status");
+    const mode = document.getElementById("mode");
+  fetch("bundle-v1.br", { method: "HEAD" }).then(r => {
+    if (r.ok && mode) mode.textContent = "Asistente de información comercial · WASM listo";
+  }).catch(() => {});
   const welcome = document.getElementById("welcome");
 
   function addMessage(role, text) {
