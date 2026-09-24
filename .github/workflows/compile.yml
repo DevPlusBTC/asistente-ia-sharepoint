@@ -1,25 +1,41 @@
-name: compile-379k
-on: { workflow_dispatch: {}, schedule: [{cron: '0 3 * * *'}] }
+name: bundle-v1
+on: { workflow_dispatch: {} }
 jobs:
-  compile:
+  build:
     runs-on: ubuntu-latest
     permissions: { contents: write }
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: '3.11' }
-      - run: pip install numpy pandas pyarrow duckdb requests
-      - run: python scripts/binarize.py --all-years --binary --out dist/
+      - name: Export D1 to bundle.json
         env:
-          TENANT_ID: ${{ secrets.TENANT_ID }}
-          CLIENT_ID: ${{ secrets.CLIENT_ID }}
-          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
-          VAULT_PASSWORD: ${{ secrets.VAULT_PASSWORD }}
-      - run: mkdir -p dist && echo "dummy" > dist/bundle-v1.br || true
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: b1274048beed05fa45dea1e2615aceb8
+          CF_DB: 4bb5b0be-c681-4b52-8aa2-d4d209b72f42
+        run: |
+          python3 - <<'EOF'
+          import os, json, urllib.request
+          base = f"https://api.cloudflare.com/client/v4/accounts/{os.environ['CF_ACCOUNT']}/d1/database/{os.environ['CF_DB']}/query"
+          def q(sql):
+              req = urllib.request.Request(base, data=json.dumps({"sql": sql}).encode(),
+                  headers={"Authorization": f"Bearer {os.environ['CF_TOKEN']}", "Content-Type": "application/json"})
+              with urllib.request.urlopen(req) as r:
+                  j = json.load(r)
+              if not j.get("success"): raise Exception(str(j)[:500])
+              return j["result"][0].get("results", [])
+          bundle = {
+            "total": q("SELECT COALESCE(SUM(CASE WHEN row_count>0 THEN row_count-1 ELSE 0 END),0) AS n FROM worksheets")[0]["n"],
+            "por_archivo": q("SELECT d.file_name AS f, d.kpi AS kpi, d.year AS y, SUM(CASE WHEN w.row_count>0 THEN w.row_count-1 ELSE 0 END) AS n FROM worksheets w JOIN datasets d ON d.id=w.dataset_id GROUP BY d.file_name, d.kpi, d.year ORDER BY n DESC"),
+            "top_categorias": q("SELECT value AS c, SUM(n) AS n FROM value_counts WHERE column_name='Nivel 1' GROUP BY value ORDER BY n DESC LIMIT 200"),
+            "columnas": q("SELECT DISTINCT name AS c FROM columns ORDER BY name LIMIT 100"),
+          }
+          os.makedirs("dist", exist_ok=True)
+          open("dist/bundle.json","w").write(json.dumps(bundle))
+          print("total:", bundle["total"], "| archivos:", len(bundle["por_archivo"]), "| cats:", len(bundle["top_categorias"]))
+          EOF
       - run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
-          cp dist/bundle-v1.br ./bundle-v1.br 2>/dev/null || cp dist/bundle.bin ./bundle-v1.br 2>/dev/null || echo "bundle" > ./bundle-v1.br
-          git add bundle-v1.br
-          git commit -m "bundle 379k" || echo "no changes"
+          cp dist/bundle.json ./bundle.json
+          git add bundle.json
+          git commit -m "bundle v1 desde D1" || echo "no changes"
           git push
