@@ -60,8 +60,9 @@
   const send = document.getElementById("send");
   const status = document.getElementById("status");
     const mode = document.getElementById("mode");
-  fetch("bundle-v1.br", { method: "HEAD" }).then(r => {
-    if (r.ok && mode) mode.textContent = "Asistente de información comercial · WASM listo";
+    fetch("bundle.json").then(r => r.json()).then(b => {
+    window.BUNDLE = b;
+    if (mode) mode.textContent = "Asistente de información comercial · offline: " + Number(b.total).toLocaleString("es-CL") + " registros";
   }).catch(() => {});
   const welcome = document.getElementById("welcome");
 
