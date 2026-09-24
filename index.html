@@ -59,8 +59,8 @@
   const chat = document.getElementById("chat");
   const send = document.getElementById("send");
   const status = document.getElementById("status");
-    const mode = document.getElementById("mode");
-    fetch("bundle.json").then(r => r.json()).then(b => {
+  const mode = document.getElementById("mode");
+  fetch("bundle.json").then(r => r.json()).then(b => {
     window.BUNDLE = b;
     if (mode) mode.textContent = "Asistente de información comercial · offline: " + Number(b.total).toLocaleString("es-CL") + " registros";
   }).catch(() => {});
@@ -81,6 +81,25 @@
     chat.scrollTop = chat.scrollHeight;
   }
 
+  function localAnswer(q) {
+    const b = window.BUNDLE;
+    if (!b) return null;
+    const t = q.toLowerCase();
+    if (!/cu[aá]ntos|total|categor[ií]a con m[aá]s|top/i.test(t)) return null;
+    if (/categor|top|m[aá]s registros/.test(t) && b.top_categorias && b.top_categorias.length) {
+      const top = b.top_categorias.slice(0, 5).map((x, i) => `${i + 1}. ${x.c} (${Number(x.n).toLocaleString("es-CL")})`).join("\n");
+      return `Top categorías (offline, bundle ${Number(b.total).toLocaleString("es-CL")} registros):\n${top}\n\nFuente: bundle.json offline.`;
+    }
+    const kpis = ["catalogación", "ecommerce", "sell in", "sell out", "fill rate", "instock", "osa", "rentabilidad", "doh"];
+    const k = kpis.find(k => t.includes(k));
+    if (k) {
+      const n = (b.por_archivo || []).filter(f => (f.kpi || "").toLowerCase().includes(k === "doh" ? "doh" : k)).reduce((a, f) => a + Number(f.n || 0), 0);
+      return `Hay ${n.toLocaleString("es-CL")} registros de ${k} (offline, bundle). Fuente: bundle.json offline.`;
+    }
+    if (/cu[aá]ntos registros hay|total/.test(t)) return `Hay ${Number(b.total).toLocaleString("es-CL")} registros en total (offline, bundle). Fuente: bundle.json offline.`;
+    return null;
+  }
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
@@ -89,6 +108,15 @@
     if (!question || send.disabled) return;
 
     addMessage("user", question);
+
+    const local = localAnswer(question);
+    if (local) {
+      addMessage("assistant", local);
+      input.value = "";
+      status.textContent = "";
+      input.focus();
+      return;
+    }
 
     input.value = "";
     send.disabled = true;
