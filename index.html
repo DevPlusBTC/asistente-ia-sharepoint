@@ -62,7 +62,7 @@
   const mode = document.getElementById("mode");
   fetch("bundle.json").then(r => r.json()).then(b => {
     window.BUNDLE = b;
-    if (mode) mode.textContent = "Asistente de información comercial · offline: " + Number(b.total).toLocaleString("es-CL") + " registros";
+    if (mode) mode.textContent = "Asistente de información comercial";
   }).catch(() => {});
   const welcome = document.getElementById("welcome");
 
@@ -81,7 +81,7 @@
     chat.scrollTop = chat.scrollHeight;
   }
 
-  function localAnswer(q) {
+  /**function localAnswer(q) {
     const b = window.BUNDLE;
     if (!b) return null;
     const t = q.toLowerCase();
@@ -98,7 +98,7 @@
     }
     if (/cu[aá]ntos registros hay|total/.test(t)) return `Hay ${Number(b.total).toLocaleString("es-CL")} registros en total (offline, bundle). Fuente: bundle.json offline.`;
     return null;
-  }
+  }**/
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
