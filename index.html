@@ -109,14 +109,14 @@
 
     addMessage("user", question);
 
-    const local = localAnswer(question);
+    /**const local = localAnswer(question);
     if (local) {
       addMessage("assistant", local);
       input.value = "";
       status.textContent = "";
       input.focus();
       return;
-    }
+    }**/
 
     input.value = "";
     send.disabled = true;
