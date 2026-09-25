@@ -179,7 +179,7 @@
     const thinking = addMessage("assistant", "");
     thinking.innerHTML = '<span class="typing"><span></span><span></span><span></span></span><div class="phase">Consultando catálogo…</div>';
 
-    const fases = ["Consultando catálogo…", "leyendo datos vía Graph…", "Ofuscando datos sensibles…", "Redactando respuesta…"];
+    const fases = ["Consultando catálogo…", "Leyendo datos vía Graph…", "Ocultando datos sensibles…", "Redactando respuesta…"];
     let fi = 0;
     const loopStatus = setInterval(() => {
       fi = (fi + 1) % fases.length;
